@@ -62,6 +62,7 @@ export function PreferredModelAction() {
   return (
     <div className="mf-preferred-action">
       <Button
+        type="button"
         size="sm"
         variant="ghost"
         disabled={pending || composer.isSubmitting || composer.isRunning}

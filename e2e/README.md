@@ -6,7 +6,7 @@ Check:
 
 1. The status reports connected preferences. Search and select/deselect work across the full provider catalog.
 2. Reorder models, star a favorite, choose preferred model/reasoning, and Apply. Expand Preview menu; the same projection must appear there and in the composer fixture.
-3. Use preferred model. Inspect Composer selection and verify the draft text is unchanged.
+3. Use preferred model. Inspect Composer selection and verify the draft text is unchanged and Submit attempts remains zero. The action runs inside a form, like BB's actual composer.
 4. Hide a model and Apply. Neither supported picker lists it. Other providers retain native lists.
 5. Unload plugin. Both native pickers restore full catalogs. Load again; saved preferences return.
 6. Switch theme and repeat at a narrow viewport. Check for horizontal overflow, clipped controls, missing labels, console errors and unreadable status text.
