@@ -4,7 +4,10 @@ import { ModelCatalogEditor } from "./ModelCatalogEditor";
 import { Button } from "./components/ui/button";
 import { useState } from "react";
 import { experimental_ProviderModelPicker as ProviderModelPicker } from "@get-bb/plugin-sdk/app";
-import type { ExperimentalProviderModelPickerValue } from "@get-bb/plugin-sdk/app";
+import type {
+  ExperimentalProviderModelPickerValue,
+  ExperimentalProviderModelPickerRouting,
+} from "@get-bb/plugin-sdk/app";
 export function ModelFilterSettings() {
   const model = useModelFilterSettings();
   const {
@@ -26,12 +29,32 @@ export function ModelFilterSettings() {
   return (
     <section className="mf-settings">
       <div className="mf-intro">
-        <p>Keep a short model list in BB’s original menus.</p>
+        <p>Choose the models you want to see for each provider.</p>
         <p className="mf-muted">
           Changes apply to every device connected to this BB server. The current
           model stays available in each picker.
         </p>
       </div>
+      <details className="mf-source">
+        <summary>Known limitations</summary>
+        <p>
+          Model Manager changes model menus, not model access. CLI requests,
+          automations, workflows and other API callers can still request hidden
+          models. Existing selections are preserved.
+        </p>
+        <p>
+          Preferred selections are applied with the Use preferred model button
+          in the new-thread composer. Automatic defaults and custom-model
+          registration are not provided by this plugin. Configure additional
+          model IDs through BB's native customModels configuration.
+        </p>
+        <p>
+          Filtering uses a version-specific compatibility adapter. If a BB
+          update changes its internals, native menus remain available and this
+          page reports that filtering is inactive. Do not run another
+          model-filtering plugin at the same time.
+        </p>
+      </details>
       <div
         className={`mf-status mf-status-${view.runtime.state}`}
         role="status"
@@ -115,13 +138,31 @@ export function ModelFilterSettings() {
         </nav>
         <ModelCatalogEditor model={model} />
       </div>
-      {providerId && <PickerPreview key={providerId} providerId={providerId} />}
+      {providerId && (
+        <PickerPreview
+          key={`${providerId}:${hostId}:${environmentId}`}
+          providerId={providerId}
+          routing={
+            environmentId
+              ? { kind: "environment", environmentId }
+              : hostId
+                ? { kind: "host", hostId }
+                : undefined
+          }
+        />
+      )}
       <SettingsFooter model={model} />
     </section>
   );
 }
 
-function PickerPreview({ providerId }: { providerId: string }) {
+function PickerPreview({
+  providerId,
+  routing,
+}: {
+  providerId: string;
+  routing?: ExperimentalProviderModelPickerRouting;
+}) {
   const [value, setValue] = useState<ExperimentalProviderModelPickerValue>({
     providerId,
     model: "",
@@ -133,7 +174,12 @@ function PickerPreview({ providerId }: { providerId: string }) {
       <p className="mf-muted">
         Try the saved selection. Changes here only affect this preview.
       </p>
-      <ProviderModelPicker value={value} onChange={setValue} />
+      <ProviderModelPicker
+        value={value}
+        onChange={setValue}
+        routing={routing}
+        allowProviderChange={false}
+      />
     </details>
   );
 }

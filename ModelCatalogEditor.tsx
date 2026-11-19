@@ -2,6 +2,7 @@ import { getProviderRule } from "./preferences";
 import type { SettingsModel } from "./settings-state";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
+import { ModelRowActions, PreferredModelFields } from "./ModelPreferences";
 const emptyRule = { mode: "all" as const, modelIds: [] as string[] };
 function ModelChecklist({ model }: { model: SettingsModel }) {
   const {
@@ -19,10 +20,14 @@ function ModelChecklist({ model }: { model: SettingsModel }) {
   } = model;
   const toggleModel = (id: string, checked: boolean) =>
     setDraft({
+      ...draft,
       mode: "selected",
       modelIds: checked
         ? [...new Set([...selected, id])]
         : [...selected].filter((modelId) => modelId !== id),
+      ...(!checked && draft.preferredModelId === id
+        ? { preferredModelId: undefined, preferredReasoning: undefined }
+        : {}),
     });
   return (
     <>
@@ -38,19 +43,26 @@ function ModelChecklist({ model }: { model: SettingsModel }) {
         </p>
       ) : (
         <div className="mf-checklist" aria-label="Available models">
-          {visible.map((model) => (
-            <label className="mf-model" key={model.model}>
-              <input
-                type="checkbox"
-                checked={selected.has(model.model)}
-                disabled={saving}
-                onChange={(e) => toggleModel(model.model, e.target.checked)}
+          {visible.map((item) => (
+            <div className="mf-model" key={item.model}>
+              <label className="mf-model-label">
+                <input
+                  type="checkbox"
+                  checked={selected.has(item.model)}
+                  disabled={saving}
+                  onChange={(e) => toggleModel(item.model, e.target.checked)}
+                />
+                <span>
+                  <span>{item.displayName || item.model}</span>
+                  <code>{item.model}</code>
+                </span>
+              </label>
+              <ModelRowActions
+                model={model}
+                id={item.model}
+                label={item.displayName || item.model}
               />
-              <span>
-                <span>{model.displayName || model.model}</span>
-                <code>{model.model}</code>
-              </span>
-            </label>
+            </div>
           ))}
           {visible.length === 0 && (
             <p className="mf-muted">
@@ -67,17 +79,45 @@ function ModelChecklist({ model }: { model: SettingsModel }) {
       </p>
       {unavailable.length > 0 && (
         <details>
-          <summary>Unavailable selections ({unavailable.length})</summary>
+          <summary>Unavailable saved models ({unavailable.length})</summary>
           {unavailable.map((id) => (
-            <label className="mf-model" key={id}>
-              <input
-                type="checkbox"
-                checked
-                disabled={saving}
-                onChange={() => toggleModel(id, false)}
-              />
+            <div className="mf-model" key={id}>
               <code>{id}</code>
-            </label>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={saving}
+                aria-label={`Remove unavailable ${id}`}
+                onClick={() =>
+                  setDraft({
+                    ...draft,
+                    modelIds: draft.modelIds.filter((item) => item !== id),
+                    ...(draft.favoriteIds
+                      ? {
+                          favoriteIds: draft.favoriteIds.filter(
+                            (item) => item !== id,
+                          ),
+                        }
+                      : {}),
+                    ...(draft.modelOrder
+                      ? {
+                          modelOrder: draft.modelOrder.filter(
+                            (item) => item !== id,
+                          ),
+                        }
+                      : {}),
+                    ...(draft.preferredModelId === id
+                      ? {
+                          preferredModelId: undefined,
+                          preferredReasoning: undefined,
+                        }
+                      : {}),
+                  })
+                }
+              >
+                Remove
+              </Button>
+            </div>
           ))}
         </details>
       )}
@@ -101,6 +141,7 @@ function SelectionControls({ model }: { model: SettingsModel }) {
         disabled={saving || loading || models.length === 0}
         onClick={() =>
           setDraft({
+            ...draft,
             mode: "selected",
             modelIds: [
               ...new Set([...draft.modelIds, ...models.map((m) => m.model)]),
@@ -114,7 +155,15 @@ function SelectionControls({ model }: { model: SettingsModel }) {
         size="sm"
         variant="outline"
         disabled={saving || loading || selected.size === 0}
-        onClick={() => setDraft({ mode: "selected", modelIds: [] })}
+        onClick={() =>
+          setDraft({
+            ...draft,
+            mode: "selected",
+            modelIds: [],
+            preferredModelId: undefined,
+            preferredReasoning: undefined,
+          })
+        }
       >
         Deselect all
       </Button>
@@ -160,6 +209,7 @@ export function ModelCatalogEditor({ model }: { model: SettingsModel }) {
       </div>
       <SelectionControls model={model} />
       <ModelChecklist model={model} />
+      <PreferredModelFields model={model} />
       {conflict && (
         <div className="mf-warning" role="alert">
           Preferences changed on another device. Your draft is preserved.{" "}

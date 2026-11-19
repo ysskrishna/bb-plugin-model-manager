@@ -149,11 +149,57 @@
 .mf-model:last-child {
   border-bottom: 0;
 }
-.mf-model > span {
+.mf-model-label {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex: 1;
+  min-width: 0;
+}
+.mf-model-label > span {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
   min-width: 0;
+}
+.mf-model-actions {
+  display: flex;
+  flex-shrink: 0;
+}
+.mf-model-actions button {
+  min-width: 2rem;
+  padding: 0.25rem;
+}
+.mf-preferences {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+  font-size: 0.85rem;
+}
+.mf-preferences label {
+  display: grid;
+  gap: 0.35rem;
+}
+.mf-preferences select {
+  width: 100%;
+  min-width: 0;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.35rem;
+  background: var(--background);
+  color: inherit;
+}
+.mf-preferences p {
+  grid-column: 1 / -1;
+  line-height: 1.5;
+}
+.mf-preferred-action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
 }
 .mf-model code {
   font-size: 0.75rem;
@@ -214,6 +260,9 @@
     padding: 0.8rem;
   }
   .mf-source-fields {
+    grid-template-columns: 1fr;
+  }
+  .mf-preferences {
     grid-template-columns: 1fr;
   }
   .mf-models-header {

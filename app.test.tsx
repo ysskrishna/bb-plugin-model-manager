@@ -38,6 +38,7 @@ const state = vi.hoisted(() => ({
 vi.mock("@get-bb/plugin-sdk/app", () => ({
   definePluginApp: (
     setup: (app: {
+      composer: { customize: () => void };
       slots: {
         experimental_appOverlay: (registration: Registration) => void;
         settingsSection: () => void;
@@ -45,6 +46,7 @@ vi.mock("@get-bb/plugin-sdk/app", () => ({
     }) => void,
   ) => {
     setup({
+      composer: { customize: () => {} },
       slots: {
         experimental_appOverlay: ({ component }) => {
           state.overlay = component;
