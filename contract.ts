@@ -18,6 +18,10 @@ export const ruleSchema = z
   .object({
     mode: z.enum(["all", "selected"]),
     modelIds: z.array(idSchema).max(MAX_MODELS),
+    favoriteIds: z.array(idSchema).max(MAX_MODELS).optional(),
+    modelOrder: z.array(idSchema).max(MAX_MODELS).optional(),
+    preferredModelId: idSchema.optional(),
+    preferredReasoning: idSchema.optional(),
   })
   .strict()
   .refine(
