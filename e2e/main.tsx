@@ -20,6 +20,7 @@ function App() {
   });
   const [dark, setDark] = useState(false);
   const [mounted, setMounted] = useState(true);
+  const [submitAttempts, setSubmitAttempts] = useState(0);
   const Overlay = registered.overlay!,
     Settings = registered.settings!,
     Action = registered.action!;
@@ -41,7 +42,13 @@ function App() {
         </header>
         {mounted && <Overlay />}
         {mounted && <Settings />}
-        <section className="fixture-composer">
+        <form
+          className="fixture-composer"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setSubmitAttempts((count) => count + 1);
+          }}
+        >
           <h2>New-thread composer fixture</h2>
           <label>
             Provider{" "}
@@ -87,7 +94,8 @@ function App() {
             aria-label="Draft"
             defaultValue="Review the model settings without submitting any work."
           />
-        </section>
+          <output aria-label="Submit attempts">{submitAttempts}</output>
+        </form>
       </main>
     </QueryContext.Provider>
   );

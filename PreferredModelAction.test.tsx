@@ -53,6 +53,28 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
+it("preserves a draft without submitting the surrounding composer form", async () => {
+  const submit = vi.fn();
+  render(
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        submit();
+      }}
+    >
+      <textarea aria-label="Draft" defaultValue="Keep this draft" />
+      <PreferredModelAction />
+    </form>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Use preferred model" }));
+  await screen.findByText("Preferred model selected.");
+  expect(submit).not.toHaveBeenCalled();
+  expect(
+    (screen.getByRole("textbox", { name: "Draft" }) as HTMLTextAreaElement)
+      .value,
+  ).toBe("Keep this draft");
+});
+
 it("applies only the provider's preferred execution fields after an explicit click", async () => {
   render(<PreferredModelAction />);
   expect(state.setSelection).not.toHaveBeenCalled();
