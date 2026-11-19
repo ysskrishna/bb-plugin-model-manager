@@ -1,19 +1,19 @@
 ---
-name: model-filter
-description: Inspect or change the models visible in BB's standard model pickers with the Model Filter plugin.
+name: model-manager
+description: Manage BB provider model menus, favorites, order and explicit preferred selections with Model Manager.
 ---
 
-# Model Filter
+# Model Manager
 
-Read `bb model-filter status --json` before changing saved preferences. Writes affect connected clients of the same BB server.
+Read `bb model-manager status --json` before changing preferences. Use exact provider/model IDs from the native raw catalog, not display labels. Writes affect every client connected to this BB server.
 
-Use opaque provider and model IDs from the user's request or the raw BB provider catalog. Display labels are not identifiers.
+- `bb model-manager select <provider> <model>...` saves visible IDs; at least one must currently be available.
+- `bb model-manager favorite <provider> <model>` and `unfavorite` edit favorites.
+- `bb model-manager order <provider> <model>...` saves order within favorite/ordinary groups.
+- `bb model-manager prefer <provider> <model> [reasoning]` saves an enabled model and supported reasoning. `clear-preferred <provider>` removes it.
+- `bb model-manager all <provider>` restores native catalog visibility while retaining preferences.
+- `bb model-manager reset <provider>` removes that rule. Reset without a provider removes all rules and requires an explicit user request covering all providers.
 
-- `bb model-filter select <provider> <model>... [--json]` saves the visible IDs. At least one selected model must be available now; previously saved unavailable IDs can remain.
-- `bb model-filter all <provider> [--json]` shows the provider's full catalog and remembers its selected IDs.
-- `bb model-filter reset <provider> [--json]` removes that provider's saved rule.
-- `bb model-filter reset [--json]` removes every saved rule; use it only for an explicit request covering all providers.
+All commands accept --json. Read back after writes. On a revision conflict, re-read before retrying the user's intended change.
 
-After a write, read status and verify the resulting rule. A revision conflict means state changed concurrently: read the current state before deciding whether the same change still applies.
-
-Filtering changes picker candidates. Existing current models remain usable, and CLI/API model access is unchanged.
+Known limitations: menu filtering does not restrict CLI/API/automation execution. Current hidden models remain usable. Preferred selections require the Use preferred model button in a new-thread composer; there is no automatic default or fallback. Custom model registration remains BB configuration. The native picker adapter is version-specific. Do not combine with another filtering adapter.
