@@ -90,6 +90,15 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
+// Complete initial catalog/preference effects before simulating user input.
+async function renderSettings() {
+  let result!: ReturnType<typeof render>;
+  await act(async () => {
+    result = render(<ModelFilterSettings />);
+  });
+  return result;
+}
+
 // React's asynchronous work must settle between separate user interactions.
 async function click(element: HTMLElement) {
   await act(async () => {
@@ -112,7 +121,7 @@ describe("model settings workflow", () => {
       revision: 2,
       providers: { custom: input.rule },
     }));
-    render(<ModelFilterSettings />);
+    await renderSettings();
     await click(
       await screen.findByRole("button", { name: "Remove unavailable retired" }),
     );
@@ -132,7 +141,7 @@ describe("model settings workflow", () => {
     expect(saved.preferredReasoning).toBeUndefined();
   });
   it("routes its native preview to the selected catalog source and fixes its provider", async () => {
-    render(<ModelFilterSettings />);
+    await renderSettings();
     await screen.findByRole("checkbox", { name: /Alpha/ });
     fireEvent.change(screen.getByRole("combobox", { name: "Machine" }), {
       target: { value: "host-new" },
@@ -155,7 +164,7 @@ describe("model settings workflow", () => {
       revision: 2,
       providers: { custom: input.rule },
     }));
-    render(<ModelFilterSettings />);
+    await renderSettings();
     await screen.findByRole("checkbox", { name: /Alpha/ });
     await click(screen.getByRole("button", { name: "Move Beta up" }));
     await click(screen.getByRole("button", { name: "Favorite Beta" }));
@@ -201,7 +210,7 @@ describe("model settings workflow", () => {
           release = resolve;
         }),
     );
-    render(<ModelFilterSettings />);
+    await renderSettings();
     await screen.findByRole("checkbox", { name: /Alpha/ });
     await click(screen.getByText("Catalog source"));
     fireEvent.change(screen.getByRole("combobox", { name: "Machine" }), {
@@ -252,7 +261,7 @@ describe("model settings workflow", () => {
       revision: 2,
       providers: {},
     });
-    render(<ModelFilterSettings />);
+    await renderSettings();
     await screen.findByText("Catalog unavailable");
     await click(screen.getByRole("button", { name: "Reset provider" }));
     await waitFor(() =>
@@ -268,7 +277,7 @@ describe("model settings workflow", () => {
       revision: 2,
       providers: { custom: { mode: "selected", modelIds: ["b"] } },
     });
-    render(<ModelFilterSettings />);
+    await renderSettings();
     await screen.findByRole("checkbox", { name: /Alpha/ });
     expect(screen.queryByRole("button", { name: "All models" })).toBeNull();
     expect(
@@ -297,7 +306,7 @@ describe("model settings workflow", () => {
     expect(screen.getAllByRole("checkbox")).toHaveLength(2);
   });
   it("preserves a local draft when another client saves and requires explicit conflict recovery", async () => {
-    const { rerender } = render(<ModelFilterSettings />);
+    const { rerender } = await renderSettings();
     await screen.findByRole("checkbox", { name: /Alpha/ });
     await click(screen.getByRole("checkbox", { name: /Alpha/ }));
     state.view = {
@@ -328,7 +337,7 @@ describe("model settings workflow", () => {
   });
   it("keeps a draft after save failure", async () => {
     state.call.mockRejectedValue(new Error("Offline"));
-    render(<ModelFilterSettings />);
+    await renderSettings();
     await screen.findByRole("checkbox", { name: /Alpha/ });
     await click(screen.getByRole("checkbox", { name: /Alpha/ }));
     await click(screen.getByRole("button", { name: "Apply" }));
@@ -359,7 +368,7 @@ describe("model settings workflow", () => {
         custom: { mode: "selected", modelIds: models.map((m) => m.model) },
       },
     });
-    render(<ModelFilterSettings />);
+    await renderSettings();
     await screen.findByRole("checkbox", { name: "Model 499 model-499" });
     fireEvent.change(screen.getByRole("textbox", { name: "Search models" }), {
       target: { value: "model-499" },
@@ -396,7 +405,7 @@ describe("model settings workflow", () => {
       revision: 2,
       providers: { custom: { mode: "selected", modelIds: ["a", "retired"] } },
     });
-    render(<ModelFilterSettings />);
+    await renderSettings();
     await screen.findByRole("checkbox", { name: /Alpha/ });
     expect(
       (screen.getByRole("checkbox", { name: /Alpha/ }) as HTMLInputElement)
