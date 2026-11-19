@@ -7,4 +7,6 @@
 - [x] Add favorites/order and preferred selection through settings and composer.
 - [x] Rename the separate plugin and document known limitations and provenance.
 - [x] Verify browser behavior in isolation, run checks, review and commit.
-- [ ] Push the task branch and open a draft PR without changing the live BB installation.
+- [x] Push the task branch and open a draft PR without changing the live BB installation.
+
+Review: [draft PR #1](https://github.com/ysskrishna/bb-plugin-model-manager/pull/1).
