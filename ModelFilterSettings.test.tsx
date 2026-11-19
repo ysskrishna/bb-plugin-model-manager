@@ -2,6 +2,7 @@
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -89,6 +90,13 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
+// React's asynchronous work must settle between separate user interactions.
+async function click(element: HTMLElement) {
+  await act(async () => {
+    fireEvent.click(element);
+  });
+}
+
 describe("model settings workflow", () => {
   it("lets a missing favorite and preferred model be removed without resetting the provider", async () => {
     state.view.snapshot.providers = {
@@ -105,10 +113,10 @@ describe("model settings workflow", () => {
       providers: { custom: input.rule },
     }));
     render(<ModelFilterSettings />);
-    fireEvent.click(
+    await click(
       await screen.findByRole("button", { name: "Remove unavailable retired" }),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await click(screen.getByRole("button", { name: "Apply" }));
     await waitFor(() =>
       expect(state.call).toHaveBeenCalledWith(
         "saveProvider",
@@ -149,8 +157,8 @@ describe("model settings workflow", () => {
     }));
     render(<ModelFilterSettings />);
     await screen.findByRole("checkbox", { name: /Alpha/ });
-    fireEvent.click(screen.getByRole("button", { name: "Move Beta up" }));
-    fireEvent.click(screen.getByRole("button", { name: "Favorite Beta" }));
+    await click(screen.getByRole("button", { name: "Move Beta up" }));
+    await click(screen.getByRole("button", { name: "Favorite Beta" }));
     fireEvent.change(
       screen.getByRole("combobox", { name: "Preferred model" }),
       { target: { value: "b" } },
@@ -159,7 +167,7 @@ describe("model settings workflow", () => {
       screen.getByRole("combobox", { name: "Preferred reasoning" }),
       { target: { value: "high" } },
     );
-    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await click(screen.getByRole("button", { name: "Apply" }));
     await waitFor(() =>
       expect(state.call).toHaveBeenCalledWith(
         "saveProvider",
@@ -195,17 +203,17 @@ describe("model settings workflow", () => {
     );
     render(<ModelFilterSettings />);
     await screen.findByRole("checkbox", { name: /Alpha/ });
-    fireEvent.click(screen.getByText("Catalog source"));
+    await click(screen.getByText("Catalog source"));
     fireEvent.change(screen.getByRole("combobox", { name: "Machine" }), {
       target: { value: "host-new" },
     });
     await screen.findByRole("checkbox", { name: /Alpha/ });
-    fireEvent.click(screen.getByRole("checkbox", { name: /Alpha/ }));
+    await click(screen.getByRole("checkbox", { name: /Alpha/ }));
     release([
       { id: "other-provider", displayName: "Other provider", available: true },
     ]);
     await screen.findByRole("heading", { name: "Other provider" });
-    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await click(screen.getByRole("button", { name: "Apply" }));
     expect(state.call).not.toHaveBeenCalled();
     // Ordinary editing of the new provider still uses its current routed context.
     await screen.findByRole("checkbox", { name: /Beta/ });
@@ -222,9 +230,9 @@ describe("model settings workflow", () => {
         ).disabled,
       ).toBe(false),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Deselect all" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: /Beta/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await click(screen.getByRole("button", { name: "Deselect all" }));
+    await click(screen.getByRole("checkbox", { name: /Beta/ }));
+    await click(screen.getByRole("button", { name: "Apply" }));
     await waitFor(() =>
       expect(state.call).toHaveBeenCalledWith("saveProvider", {
         expectedRevision: 1,
@@ -246,7 +254,7 @@ describe("model settings workflow", () => {
     });
     render(<ModelFilterSettings />);
     await screen.findByText("Catalog unavailable");
-    fireEvent.click(screen.getByRole("button", { name: "Reset provider" }));
+    await click(screen.getByRole("button", { name: "Reset provider" }));
     await waitFor(() =>
       expect(state.call).toHaveBeenCalledWith("resetPreferences", {
         expectedRevision: 1,
@@ -270,13 +278,13 @@ describe("model settings workflow", () => {
       (screen.getByRole("checkbox", { name: /Alpha/ }) as HTMLInputElement)
         .disabled,
     ).toBe(false);
-    fireEvent.click(screen.getByRole("button", { name: "Deselect all" }));
+    await click(screen.getByRole("button", { name: "Deselect all" }));
     expect(
       (screen.getByRole("button", { name: "Apply" }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
-    fireEvent.click(screen.getByRole("checkbox", { name: /Beta/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await click(screen.getByRole("checkbox", { name: /Beta/ }));
+    await click(screen.getByRole("button", { name: "Apply" }));
     await waitFor(() =>
       expect(state.call).toHaveBeenCalledWith("saveProvider", {
         expectedRevision: 1,
@@ -291,7 +299,7 @@ describe("model settings workflow", () => {
   it("preserves a local draft when another client saves and requires explicit conflict recovery", async () => {
     const { rerender } = render(<ModelFilterSettings />);
     await screen.findByRole("checkbox", { name: /Alpha/ });
-    fireEvent.click(screen.getByRole("checkbox", { name: /Alpha/ }));
+    await click(screen.getByRole("checkbox", { name: /Alpha/ }));
     state.view = {
       ...state.view,
       snapshot: {
@@ -308,9 +316,7 @@ describe("model settings workflow", () => {
       (screen.getByRole("button", { name: "Apply" }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
-    fireEvent.click(
-      screen.getByRole("button", { name: "Load latest selection" }),
-    );
+    await click(screen.getByRole("button", { name: "Load latest selection" }));
     expect(
       (screen.getByRole("checkbox", { name: /Alpha/ }) as HTMLInputElement)
         .checked,
@@ -324,8 +330,8 @@ describe("model settings workflow", () => {
     state.call.mockRejectedValue(new Error("Offline"));
     render(<ModelFilterSettings />);
     await screen.findByRole("checkbox", { name: /Alpha/ });
-    fireEvent.click(screen.getByRole("checkbox", { name: /Alpha/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await click(screen.getByRole("checkbox", { name: /Alpha/ }));
+    await click(screen.getByRole("button", { name: "Apply" }));
     await screen.findByText("Offline");
     expect(
       (screen.getByRole("checkbox", { name: /Beta/ }) as HTMLInputElement)
@@ -359,7 +365,7 @@ describe("model settings workflow", () => {
       target: { value: "model-499" },
     });
     expect(screen.getAllByRole("checkbox")).toHaveLength(1);
-    fireEvent.click(screen.getByRole("button", { name: "Deselect all" }));
+    await click(screen.getByRole("button", { name: "Deselect all" }));
     expect((screen.getByRole("checkbox") as HTMLInputElement).checked).toBe(
       false,
     );
@@ -367,11 +373,11 @@ describe("model settings workflow", () => {
       (screen.getByRole("button", { name: "Apply" }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
-    fireEvent.click(screen.getByRole("button", { name: "Select all" }));
+    await click(screen.getByRole("button", { name: "Select all" }));
     expect((screen.getByRole("checkbox") as HTMLInputElement).checked).toBe(
       true,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await click(screen.getByRole("button", { name: "Apply" }));
     await waitFor(() =>
       expect(state.call).toHaveBeenCalledWith("saveProvider", {
         expectedRevision: 1,
@@ -396,8 +402,8 @@ describe("model settings workflow", () => {
       (screen.getByRole("checkbox", { name: /Alpha/ }) as HTMLInputElement)
         .checked,
     ).toBe(true);
-    fireEvent.click(screen.getByRole("checkbox", { name: /Beta/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await click(screen.getByRole("checkbox", { name: /Beta/ }));
+    await click(screen.getByRole("button", { name: "Apply" }));
     await waitFor(() =>
       expect(state.call).toHaveBeenCalledWith("saveProvider", {
         expectedRevision: 1,
