@@ -24,4 +24,8 @@ The inherited Vitest 3 worker dependency had critical audit findings. The test r
 
 The isolated browser fixture uses the real plugin app/settings/composer action and real TanStack QueryClient/QueryObserver, with an emulated BB SDK and labeled catalogs. It verifies browser rendering, lifecycle wiring and observer behavior without vendor requests. Server tests use a real migrated temporary SQLite database.
 
-No production plugin installation, paid inference, live provider quota changes, physical mobile device, Electron-specific acceptance, or full live BB restart is claimed by these checks. A live install must verify the native picker, keyboard cycling, reconnect, and disable restoration before widening support.
+Local installation acceptance on BB 0.50.1 also verified the real server-backed settings page, persistence after reload, both native picker surfaces, preservation of a hidden current selection, and restoration of the full catalog when filtering or the plugin is disabled. Re-enabling restores saved preferences. Explicit preferred selection preserves a populated draft without creating a thread. Temporary model preferences were cleared after testing.
+
+That acceptance caught a missing button type inside BB's composer form. The action now explicitly uses `type="button"`; a new form regression test fails before the fix and passes after it. The suite now has 63 passing tests. Settings tests also await initial React effects before input; 25 consecutive focused runs passed after this correction.
+
+The local browser used the actual BB frontend and server, not the emulated fixture. Physical mobile devices, Electron shell-specific behavior, keyboard cycling, a full BB application restart, and broader BB versions remain unverified. Do not widen support based on this one installation.

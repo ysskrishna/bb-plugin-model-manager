@@ -25,7 +25,7 @@ These are accepted V1 boundaries, not claims that BB enforces a model policy:
 4. **Version-specific adapter.** Settings, storage, RPC and the preferred-model action use public APIs. Native filtering also uses private React/TanStack observer integration. A future BB change can break it. When query-client discovery fails, the plugin reports inactivity and leaves native menus usable. Do not run it alongside another model-filtering adapter.
 5. Independent BB servers do not synchronize preferences. This separate plugin does not automatically import another plugin's database.
 
-The compatibility target is **BB 0.50.1 / Plugin SDK 0.6.157**. Automated contracts and an isolated browser harness verify the adapter; live installation into the user's BB is a separate acceptance step. See [compatibility](docs/compatibility.md).
+The compatibility target is **BB 0.50.1 / Plugin SDK 0.6.157**. Verification includes automated contracts, an isolated browser harness and local installation against the real BB frontend/server. Broader versions and platforms remain unverified. See [compatibility](docs/compatibility.md).
 
 ## CLI
 
