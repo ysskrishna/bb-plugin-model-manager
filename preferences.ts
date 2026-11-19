@@ -1,6 +1,10 @@
 export interface Rule {
   mode: "all" | "selected";
   modelIds: string[];
+  favoriteIds?: string[];
+  modelOrder?: string[];
+  preferredModelId?: string;
+  preferredReasoning?: string;
 }
 export interface Snapshot {
   revision: number;
@@ -38,7 +42,17 @@ function object(value: unknown): value is Record<string, unknown> {
 export function normalizeRule(input: unknown): Rule {
   if (
     !object(input) ||
-    Object.keys(input).some((key) => key !== "mode" && key !== "modelIds") ||
+    Object.keys(input).some(
+      (key) =>
+        ![
+          "mode",
+          "modelIds",
+          "favoriteIds",
+          "modelOrder",
+          "preferredModelId",
+          "preferredReasoning",
+        ].includes(key),
+    ) ||
     !["all", "selected"].includes(input.mode as string) ||
     !Array.isArray(input.modelIds) ||
     input.modelIds.length > MAX_MODELS ||
@@ -48,7 +62,28 @@ export function normalizeRule(input: unknown): Rule {
   const modelIds = [...new Set(input.modelIds as string[])];
   if (input.mode === "selected" && modelIds.length === 0)
     throw new Error("Select at least one model");
-  return { mode: input.mode as Rule["mode"], modelIds };
+  const result: Rule = { mode: input.mode as Rule["mode"], modelIds };
+  for (const key of ["favoriteIds", "modelOrder"] as const) {
+    const ids = input[key];
+    if (ids === undefined) continue;
+    if (!Array.isArray(ids) || ids.length > MAX_MODELS || !ids.every(validId))
+      throw new Error(`Invalid ${key}`);
+    result[key] = [...new Set(ids)];
+  }
+  if (input.preferredModelId !== undefined) {
+    if (
+      !validId(input.preferredModelId) ||
+      (result.mode === "selected" && !modelIds.includes(input.preferredModelId))
+    )
+      throw new Error("Preferred model must be selected");
+    result.preferredModelId = input.preferredModelId;
+  }
+  if (input.preferredReasoning !== undefined) {
+    if (!result.preferredModelId || !validId(input.preferredReasoning))
+      throw new Error("Preferred reasoning requires a preferred model");
+    result.preferredReasoning = input.preferredReasoning;
+  }
+  return result;
 }
 
 export function parseSnapshot(input: unknown): Snapshot {
@@ -91,12 +126,36 @@ export interface Catalog {
   selectedOnlyModels?: CatalogModel[];
 }
 
+export function sortModels<M extends CatalogModel>(
+  models: M[],
+  rule: Rule,
+): M[] {
+  const favorites = new Set(rule.favoriteIds);
+  const order = new Map(rule.modelOrder?.map((id, index) => [id, index]));
+  return [...models].sort(
+    (a, b) =>
+      Number(favorites.has(b.model)) - Number(favorites.has(a.model)) ||
+      (order.get(a.model) ?? Number.MAX_SAFE_INTEGER) -
+        (order.get(b.model) ?? Number.MAX_SAFE_INTEGER),
+  );
+}
+
 /** Keep native current-model lookup intact while reducing visible candidates.
  * Enumerable array methods make TanStack's structural sharing retain this
  * local facade rather than copying its indexed values into a plain array.
  */
 export function projectCatalog<T extends Catalog>(data: T, rule?: Rule): T {
-  if (!rule || rule.mode === "all") return data;
+  if (!rule) return data;
+  if (rule.mode === "all") {
+    if (!rule.favoriteIds?.length && !rule.modelOrder?.length) return data;
+    return {
+      ...data,
+      models: sortModels(data.models, rule),
+      ...(data.selectedOnlyModels
+        ? { selectedOnlyModels: sortModels(data.selectedOnlyModels, rule) }
+        : {}),
+    };
+  }
   const allowed = new Set(rule.modelIds);
   const unique = <M extends CatalogModel>(models: M[]): M[] => {
     const seen = new Set<string>();
@@ -105,10 +164,16 @@ export function projectCatalog<T extends Catalog>(data: T, rule?: Rule): T {
     );
   };
   const originalMore = unique(data.selectedOnlyModels ?? []);
-  const models = data.models.filter((item) => allowed.has(item.model));
+  const models = sortModels(
+    data.models.filter((item) => allowed.has(item.model)),
+    rule,
+  );
   const hidden = data.models.filter((item) => !allowed.has(item.model));
   const selectedOnlyModels = unique([...originalMore, ...hidden]);
-  const visibleMore = originalMore.filter((item) => allowed.has(item.model));
+  const visibleMore = sortModels(
+    originalMore.filter((item) => allowed.has(item.model)),
+    rule,
+  );
   Object.defineProperties(selectedOnlyModels, {
     filter: {
       enumerable: true,

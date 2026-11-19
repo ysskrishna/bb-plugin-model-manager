@@ -1,13 +1,13 @@
-## A shorter model list in the original picker
+## Curate each provider's model menu
 
-Choose visible models for each provider in one checklist in Settings. Use Select all or Deselect all for the entire catalog, even while searching. Clear a large list, check your favorites, and apply. Providers keep their full lists until configured; saved selections hide new model IDs until you choose them. Each picker's current model stays available with its native metadata.
+Choose visible models, star favorites, reorder them, and save a preferred model and reasoning level. Devices connected to one BB server share preferences with revision checks for concurrent edits. Native model metadata and each picker's current selection are preserved.
 
-Reset a provider or all preferences to restore native lists, including future models. At least one available model is required to apply a selection. Saved preferences are shared by connected clients of the same BB server, with revision checks for concurrent edits.
+Use the preferred model button in the new-thread composer to apply the current provider's saved choice without sending a message. Configure additional model IDs through BB itself, then manage their visibility here.
 
-The `bb model-filter` CLI reads and changes the same server-stored preferences. The plugin adds no external service or credential setting. It changes picker choices rather than provider permissions, billing, or CLI/API model access.
+## Requirements and limits
 
-## Compatibility boundary
+Targets BB 0.50.1 and Plugin SDK 0.6.157. Based on the MIT-licensed Model Filter plugin. No separate account, credential, service, or inference call is added.
 
-The integration target is BB 0.47.1 with Plugin SDK 0.6.79. Native filtering uses a version-scoped private React/TanStack runtime adapter in addition to public SDK features. If that adapter is unavailable, native choices remain usable and Settings reports filtering as inactive. BB updates require renewed compatibility checks.
+Filtering affects native model menus. It does not restrict explicit CLI/API, automation, task, or workflow execution. Preferred selections are explicit actions, not automatic system-wide defaults. There is no fallback routing.
 
-No separate service, API key, or paid account is required. Provider access remains configured in BB.
+Native filtering uses a version-specific private React/TanStack adapter. An incompatible client keeps its native menus and reports inactive filtering. Disable other model-filtering adapters before use. Live installation remains a separate acceptance step after the isolated verification harness.

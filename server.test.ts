@@ -48,6 +48,27 @@ const save = (
 });
 
 describe("server preferences", () => {
+  it("validates retained preferences in the CLI project's catalog when showing all models", async () => {
+    const requests: unknown[] = [];
+    const { harness } = await setup(async (args) => {
+      requests.push(args);
+      return catalog();
+    });
+    await harness.behavior.callRpc("saveProvider", {
+      expectedRevision: 0,
+      providerId: "alpha",
+      rule: { mode: "all", modelIds: [], favoriteIds: ["vendor/x"] },
+    });
+    expect(
+      (await harness.behavior.runCli(["all", "alpha"], { projectId: "proj_1" }))
+        .exitCode,
+    ).toBe(0);
+    expect(requests.at(-1)).toEqual({
+      providerId: "alpha",
+      projectId: "proj_1",
+    });
+  });
+
   it("starts empty, validates raw routed IDs, and broadcasts only committed revisions", async () => {
     const { harness } = await setup();
     expect(await harness.behavior.callRpc("getPreferences", null)).toEqual({

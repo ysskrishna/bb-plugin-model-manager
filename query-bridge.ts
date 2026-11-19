@@ -48,7 +48,10 @@ function isCatalog(value: unknown): value is NativeCatalog {
   );
 }
 function targets(key: readonly unknown[] | undefined): boolean {
-  return key?.[0] === "systemExecutionOptions" && key.length === 5;
+  return (
+    key?.[0] === "systemExecutionOptions" &&
+    (key.length === 5 || (key.length === 6 && typeof key[5] === "string"))
+  );
 }
 function observerFromEvent(event: unknown): Observer | null {
   if (

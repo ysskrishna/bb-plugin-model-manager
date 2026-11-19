@@ -1,14 +1,15 @@
 {
-  "name": "bb-plugin-model-filter",
+  "name": "bb-plugin-model-manager",
   "version": "0.1.0",
   "type": "module",
   "engines": {
-    "bb": ">=0.47.1 <0.48.0",
-    "bbPluginSdk": ">=0.6.79 <0.7.0"
+    "bb": ">=0.50.1 <0.51.0",
+    "bbPluginSdk": ">=0.6.157 <0.7.0",
+    "node": ">=22.19.0"
   },
   "bb": {
-    "name": "Model Filter",
-    "description": "Show only the models you choose in BB\u2019s standard model pickers.",
+    "name": "Model Manager",
+    "description": "Curate provider model menus, favorites, order and preferred selections across connected BB clients.",
     "branding": {
       "icon": "./assets/icon.svg"
     },
@@ -19,18 +20,18 @@
     ]
   },
   "dependencies": {
+    "@get-bb/plugin-sdk": "0.6.157",
     "@radix-ui/react-slot": "^1.3.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@get-bb/plugin-sdk": "0.6.79",
     "@tanstack/query-core": "5.105.0",
     "@testing-library/react": "^16.3.3",
     "@types/better-sqlite3": "^7.6.12",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "bb-app": "0.47.1",
+    "bb-app": "0.50.1",
     "better-sqlite3": "^12.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -40,24 +41,28 @@
     "prettier": "3.9.10",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "tailwind-merge": "^3.4.0",
+    "tailwind-merge": "^3.7.0",
     "typescript": "^5.7.0",
-    "vitest": "^3.2.7"
+    "vite": "7.3.7",
+    "vitest": "5.1.1"
   },
   "allowScripts": {
     "better-sqlite3": true
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && npm run typecheck:fixture",
     "test": "vitest run",
     "build": "bb plugin build",
     "check:sdk": "node scripts/check-sdk.mjs",
-    "format:check": "prettier --check \"*.{ts,tsx,css}\" \"scripts/**/*.mjs\" \"*.{md,json}\" \"skills/**/*.md\" \".github/**/*.yml\"",
-    "format": "prettier --write \"*.{ts,tsx,css}\" \"scripts/**/*.mjs\" \"*.{md,json}\" \"skills/**/*.md\" \".github/**/*.yml\""
+    "format:check": "prettier --check \"*.{ts,tsx,css}\" \"scripts/**/*.mjs\" \"*.{md,json}\" \"skills/**/*.md\" \".github/**/*.yml\" \"e2e/**/*.{ts,tsx,css,html,json,md}\" \"tasks/**/*.md\" \"docs/*.md\"",
+    "format": "prettier --write \"*.{ts,tsx,css}\" \"scripts/**/*.mjs\" \"*.{md,json}\" \"skills/**/*.md\" \".github/**/*.yml\" \"e2e/**/*.{ts,tsx,css,html,json,md}\" \"tasks/**/*.md\" \"docs/*.md\"",
+    "check": "npm run format:check && npm run typecheck && npm run check:sdk && npm test && npm run build",
+    "dev:fixture": "vite --config e2e/vite.config.ts",
+    "typecheck:fixture": "tsc --noEmit -p e2e/tsconfig.json"
   },
   "private": true,
   "license": "MIT",
-  "description": "Choose visible models in BB standard model pickers.",
+  "description": "Curate provider model menus, favorites, order and preferred selections across connected BB clients.",
   "files": [
     "dist/",
     "*.ts",
@@ -77,6 +82,6 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/werserk/bb-plugin-model-filter.git"
+    "url": "https://github.com/ysskrishna/bb-plugin-model-manager.git"
   }
 }

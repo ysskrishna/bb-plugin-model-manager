@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRpc, useSdk } from "@get-bb/plugin-sdk/app";
 import type { PluginBrowserBbSdk } from "@get-bb/plugin-sdk/app";
 import { rpcContract } from "./contract";
-import { getProviderRule, type Rule } from "./preferences";
+import { getProviderRule, sortModels, type Rule } from "./preferences";
 import {
   receivePreferences,
   reportSyncError,
@@ -22,8 +22,7 @@ type Environment = Awaited<
 const emptyRule: Rule = { mode: "all", modelIds: [] };
 const describe = (cause: unknown) =>
   cause instanceof Error ? cause.message : String(cause);
-const signature = (rule: Rule) =>
-  JSON.stringify({ mode: rule.mode, modelIds: [...rule.modelIds].sort() });
+const signature = (rule: Rule) => JSON.stringify(rule);
 
 function useCatalogSources({
   sdk,
@@ -144,16 +143,46 @@ function useCatalogSelection(
     ...(draft.mode === "all" ? models.map((model) => model.model) : []),
     ...draft.modelIds,
   ]);
-  const visible = models.filter((model) =>
+  const favorites = new Set(draft.favoriteIds);
+  const orderedModels = sortModels(models, draft);
+  const neighbors = new Map<string, { previous?: string; next?: string }>();
+  for (const group of [
+    orderedModels.filter((item) => favorites.has(item.model)),
+    orderedModels.filter((item) => !favorites.has(item.model)),
+  ]) {
+    group.forEach((item, index) =>
+      neighbors.set(item.model, {
+        previous: group[index - 1]?.model,
+        next: group[index + 1]?.model,
+      }),
+    );
+  }
+  const visible = orderedModels.filter((model) =>
     `${model.displayName} ${model.model}`
       .toLowerCase()
       .includes(query.toLowerCase()),
   );
-  const unavailable = draft.modelIds.filter((id) => !known.has(id));
+  const unavailable = [
+    ...new Set([
+      ...draft.modelIds,
+      ...(draft.favoriteIds ?? []),
+      ...(draft.modelOrder ?? []),
+      ...(draft.preferredModelId ? [draft.preferredModelId] : []),
+    ]),
+  ].filter((id) => !known.has(id));
   const selectedAvailable = models.filter((model) =>
     selected.has(model.model),
   ).length;
-  return { models, selected, visible, unavailable, selectedAvailable };
+  return {
+    models,
+    orderedModels,
+    favorites,
+    neighbors,
+    selected,
+    visible,
+    unavailable,
+    selectedAvailable,
+  };
 }
 
 export function useModelFilterSettings() {

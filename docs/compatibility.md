@@ -1,45 +1,27 @@
-# Compatibility and evidence
+# Compatibility and known issues
 
-## Verified target
+Target: BB 0.50.1, Plugin SDK 0.6.157. The manifest bounds BB support to 0.50.x. This range is a compatibility guard, not evidence every patch/platform has been tested.
 
-BB 0.47.1, Plugin SDK 0.6.79, installed Chromium browser client, and TanStack Query v5 observer behavior. Manifest support is bounded to BB0.47.x; later releases require rechecking this adapter. The local tests import @tanstack/query-core5.105.0 directly as a development-only dependency.
+## Audit findings
 
-The private boundary is isolated in query-bridge.ts: a bounded React ancestor walk from the plugin-owned mount and a wrapper around the shared QueryClient.defaultQueryOptions. Target query keys are [systemExecutionOptions, environmentId, hostId, providerId, projectId]. Settings/storage/RPC/realtime/catalog reads and the preview picker use public SDK surfaces. No BB files or private imports are required.
+- Upstream manifest refused BB 0.48 and later.
+- Its adapter matched only five-part systemExecutionOptions query keys. BB's selected-model discovery adds a sixth field. A real TanStack observer regression reproduced unfiltered results, and the fix covers both known forms.
+- The SDK was pinned to 0.6.79 in development dependencies even though contract.ts imports a runtime SDK helper. It now matches the installed host and is in dependencies as BB's type-sync tool requires.
+- Runtime-shimmed tailwind-merge types and the bb-app development/build dependency now match the target environment.
+- The original 47 tests passed after rebuilding the native SQLite test dependency. New tests add preference validation, server/CLI persistence, composer behavior and six-part queries.
 
-## Checked on the installed application
+## Accepted limitations
 
-Live checks used a local headless Browser Automation session on 2026-10-26. No model inference or automation was submitted.
+Menu-only filtering can be bypassed by explicit CLI/API and other plugin requests. Existing current model selections remain usable. Preferred selections require clicking the composer action; fixed automatic defaults are not supplied. Custom model registration remains native BB configuration. Fallback routing is out of scope.
 
-| Surface                 | Observed result                                                                                                                                       | Evidence                                                      |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| Settings save           | Full Codex catalog7; select Astra and Sol, Apply succeeds; canonical IDs persist in CLI readback.                                                     | verification/native-picker.json                               |
-| Existing thread         | Allowed Astra/Sol plus hidden6.1-Sol marked Current; reasoning and Fast mode remain native.                                                           | media/menu.jpg; browser snapshots                             |
-| New-thread draft        | Same filtered options; BB's remembered draft model is also preserved as its local current.                                                            | verification/native-picker.json                               |
-| Hosted SDK picker       | Preview shows only Astra/Sol;6.1-Sol from another picker does not leak into it.                                                                       | verification/hosted-picker.json                               |
-| Built-in Claude Code    | 16 complete settings entries, Opus5.5 selected; native preview preserves only its local Sonnet5.5 Current exception.                                  | verification/claude-live.json                                 |
-| ACP provider / handoff  | opencode raw catalog463 reduced to exactly Claude Fable5 and5.1 in the original handoff menu.                                                         | verification/re-enabled.json                                  |
-| Two clients, open menu  | Saving Astra removal in settings immediately removes it from another page's already-open picker, retaining Sol/current; adding it restores it.        | Live browser snapshots; realtime tests                        |
-| Native keyboard cycling | Alt+M cycles Astra→Sol→Astra→Sol. The former6.1-Sol exception disappears after choosing another model.                                                | verification/keyboard-live.json                               |
-| Raw cache               | Codex raw count remains7 while its observer data has2 visible models and0 hidden More candidates. Raw opencode count remains463.                      | verification/native-picker.json                               |
-| Filter setting off/on   | An already-open opencode menu restores the full list/search; re-enable returns2 choices and no search.                                                | verification/re-enabled.json                                  |
-| Whole plugin unload     | Runtime mount disappears; open opencode dialog returns477 total buttons including native controls/search.                                             | verification/unloaded.json                                    |
-| Reload / enable         | Saved rules survive backend/plugin reload and re-enable; settings and native menus reconnect.                                                         | CLI readback; browser snapshots                               |
-| Single-list settings    | Both bulk controls are immediately available; search-independent 0/7 and 7/7 states, 0/463 and 463/463 bulk changes, direct editing and Discard work. | verification/settings-simplification.json; media/settings.jpg |
+Private React/query-client discovery and the selectedOnlyModels array facade can break after BB changes. Discovery failure restores native choices; runtime status reports unsupported. Do not stack Model Manager with other model-filtering adapters.
 
-The raw JSON captures are under verification/. Images are cropped application screenshots, with no synthetic rows or labels.
+## Verification boundaries
 
-## Automated contracts
+The V1 review passed `npm run check`: formatting, application and fixture types, SDK checks, 62 tests and the plugin build. A deliberate adapter-condition mutation failed the selected-model query regression test, then the restored code passed. The browser fixture verified favorites/order/filtering in both pickers, explicit preferred model/reasoning selection with the draft preserved, unload restoration and narrow light/dark rendering. A CLI regression also covers retaining project routing when returning to all models.
 
-Domain and real SQLite tests cover canonical arbitrary IDs, equal labels, new IDs, unavailable/retained IDs, duplicate metadata, bounds, corrupt/future stored versions, persistence, revision conflicts, asynchronous save races, raw catalog validation, CLI and realtime events. UI tests cover direct full-catalog editing, search-independent bulk actions on 500 models, legacy all rules with unavailable IDs, empty-save prevention, conflict recovery, failed-save draft preservation, catalog-error reset and a routed provider change during asynchronous discovery. Bridge tests use both a minimal host and real TanStack QueryClient/QueryObserver, covering selected placeholders, existing/new observers, selector composition, untouched raw caches and wrapper restoration.
+The inherited Vitest 3 worker dependency had critical audit findings. The test runner was upgraded to Vitest 5.1.1 after checking its migration requirements; the existing suite passed before and after the upgrade. Production dependencies report no audit findings. Moderate findings remain in the development-only BB build-tool dependency chain; applying npm's suggested BB downgrade would conflict with the target version and was not done.
 
-## Limits and failure posture
+The isolated browser fixture uses the real plugin app/settings/composer action and real TanStack QueryClient/QueryObserver, with an emulated BB SDK and labeled catalogs. It verifies browser rendering, lifecycle wiring and observer behavior without vendor requests. Server tests use a real migrated temporary SQLite database.
 
-This is a version-scoped runtime integration, not a documented public model-filter hook. The SDK scan checks imports, not compatibility of React fields or native resolver behavior. The declared BB range does not prove every future0.47 patch.
-
-Desktop Electron, physical mobile clients, full BB-server restart and a network outage during an open menu were not individually exercised live. They use the same browser bundle, server database and reconnect lifecycle; coverage of those paths is inferred from the shared code and automated contracts. The README badge and GitHub Actions page report current repository CI; the original local acceptance did not exercise remote CI. Release source and installation are described in README.md. At original acceptance, temporary rules were reset to an empty provider map at revision6; the draft model and empty composer were restored (verification/restored-draft.json). The later settings simplification check preserves the owner's current preferences byte-for-byte at revision9.
-
-If a compatible query client cannot be found, the plugin reports inactivity and preserves native options. A failed preferences fetch keeps the last snapshot in that client and reports the sync error; a new client starts with native options until preferences arrive. A catalog that loses all selected IDs keeps its allowlist and BB's own empty/unavailable presentation; recovery is through settings or disable. Filtering is presentation preference, not access control.
-
-## Community screenshots and evidence hygiene
-
-The settings image is a real DPR2 capture after the single-list correction:1504×1922 JPEG. The native picker image is the earlier DPR2 Community capture:1400×640 JPEG. They show only plugin controls, provider names and a blank composer context. Temporary selections from the earlier capture were removed; the latest settings capture uses the owner's saved selection without writing preferences. Public evidence copies omit local host/session identifiers and absolute skill paths; original local captures remain outside the repository. Older Git commits still retain previous locator metadata, which is disclosed with the exact release approval.
+No production plugin installation, paid inference, live provider quota changes, physical mobile device, Electron-specific acceptance, or full live BB restart is claimed by these checks. A live install must verify the native picker, keyboard cycling, reconnect, and disable restoration before widening support.

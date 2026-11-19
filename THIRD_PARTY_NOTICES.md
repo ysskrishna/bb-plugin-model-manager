@@ -1,3 +1,7 @@
+# Upstream foundation
+
+Model Manager derives from werserk/bb-plugin-model-filter at commit c65110707e454f190853d8aaee269933c9581df7. The original MIT copyright and license remain in LICENSE. Existing notices below are retained.
+
 # Third-party notices
 
 The plugin's own code is MIT licensed. Vendored UI source and bundled dependencies retain the following notices. Host-provided SDK/runtime packages retain their own licenses.

@@ -1,3 +1,14 @@
+# Model Manager changes
+
+## Unreleased
+
+- Target BB 0.50.1 and fix filtering for selected-model discovery queries.
+- Add provider favorites, ordering and explicit preferred model/reasoning selections.
+- Document menu-only filtering, native custom-model setup and the private compatibility adapter.
+- Retain the upstream SQLite revision and raw-catalog validation foundation.
+
+## Upstream Model Filter history
+
 # Changelog
 
 ## 0.1.0 — 2026-10-26

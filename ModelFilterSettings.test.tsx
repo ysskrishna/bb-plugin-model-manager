@@ -2,6 +2,7 @@
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -34,8 +35,16 @@ const rpc = { call: state.call };
 vi.mock("@get-bb/plugin-sdk/app", () => ({
   useSdk: () => sdk,
   useRpc: () => rpc,
-  experimental_ProviderModelPicker: () => (
-    <button>Native picker preview</button>
+  experimental_ProviderModelPicker: (props: {
+    routing?: object;
+    allowProviderChange?: boolean;
+  }) => (
+    <button
+      data-routing={JSON.stringify(props.routing)}
+      data-provider-change={String(props.allowProviderChange)}
+    >
+      Native picker preview
+    </button>
   ),
 }));
 vi.mock("./preferences-client", () => ({
@@ -65,15 +74,116 @@ beforeEach(() => {
   state.executionOptions.mockResolvedValue({
     providers: [{ id: "custom", available: true }],
     models: [
-      { model: "a", displayName: "Alpha" },
-      { model: "b", displayName: "Beta" },
+      {
+        model: "a",
+        displayName: "Alpha",
+        supportedReasoningEfforts: [{ reasoningEffort: "high" }],
+      },
+      {
+        model: "b",
+        displayName: "Beta",
+        supportedReasoningEfforts: [{ reasoningEffort: "high" }],
+      },
     ],
     selectedOnlyModels: [],
   });
 });
 afterEach(cleanup);
 
+// React's asynchronous work must settle between separate user interactions.
+async function click(element: HTMLElement) {
+  await act(async () => {
+    fireEvent.click(element);
+  });
+}
+
 describe("model settings workflow", () => {
+  it("lets a missing favorite and preferred model be removed without resetting the provider", async () => {
+    state.view.snapshot.providers = {
+      custom: {
+        mode: "all",
+        modelIds: [],
+        favoriteIds: ["retired"],
+        preferredModelId: "retired",
+        preferredReasoning: "high",
+      },
+    };
+    state.call.mockImplementation(async (_method, input) => ({
+      revision: 2,
+      providers: { custom: input.rule },
+    }));
+    render(<ModelFilterSettings />);
+    await click(
+      await screen.findByRole("button", { name: "Remove unavailable retired" }),
+    );
+    await click(screen.getByRole("button", { name: "Apply" }));
+    await waitFor(() =>
+      expect(state.call).toHaveBeenCalledWith(
+        "saveProvider",
+        expect.objectContaining({
+          rule: expect.objectContaining({ mode: "all", favoriteIds: [] }),
+        }),
+      ),
+    );
+    const saved = state.call.mock.calls.find(
+      ([name]) => name === "saveProvider",
+    )![1].rule;
+    expect(saved.preferredModelId).toBeUndefined();
+    expect(saved.preferredReasoning).toBeUndefined();
+  });
+  it("routes its native preview to the selected catalog source and fixes its provider", async () => {
+    render(<ModelFilterSettings />);
+    await screen.findByRole("checkbox", { name: /Alpha/ });
+    fireEvent.change(screen.getByRole("combobox", { name: "Machine" }), {
+      target: { value: "host-new" },
+    });
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: "Native picker preview" })
+          .getAttribute("data-routing"),
+      ).toBe(JSON.stringify({ kind: "host", hostId: "host-new" })),
+    );
+    expect(
+      screen
+        .getByRole("button", { name: "Native picker preview" })
+        .getAttribute("data-provider-change"),
+    ).toBe("false");
+  });
+  it("saves ordering, favorites and a preferred model without changing visibility", async () => {
+    state.call.mockImplementation(async (_method, input) => ({
+      revision: 2,
+      providers: { custom: input.rule },
+    }));
+    render(<ModelFilterSettings />);
+    await screen.findByRole("checkbox", { name: /Alpha/ });
+    await click(screen.getByRole("button", { name: "Move Beta up" }));
+    await click(screen.getByRole("button", { name: "Favorite Beta" }));
+    fireEvent.change(
+      screen.getByRole("combobox", { name: "Preferred model" }),
+      { target: { value: "b" } },
+    );
+    fireEvent.change(
+      screen.getByRole("combobox", { name: "Preferred reasoning" }),
+      { target: { value: "high" } },
+    );
+    await click(screen.getByRole("button", { name: "Apply" }));
+    await waitFor(() =>
+      expect(state.call).toHaveBeenCalledWith(
+        "saveProvider",
+        expect.objectContaining({
+          rule: {
+            mode: "all",
+            modelIds: [],
+            modelOrder: ["b", "a"],
+            favoriteIds: ["b"],
+            preferredModelId: "b",
+            preferredReasoning: "high",
+          },
+        }),
+      ),
+    );
+  });
   it("binds drafts to their provider when routed discovery switches provider asynchronously", async () => {
     state.view.snapshot = {
       revision: 1,
@@ -93,17 +203,17 @@ describe("model settings workflow", () => {
     );
     render(<ModelFilterSettings />);
     await screen.findByRole("checkbox", { name: /Alpha/ });
-    fireEvent.click(screen.getByText("Catalog source"));
+    await click(screen.getByText("Catalog source"));
     fireEvent.change(screen.getByRole("combobox", { name: "Machine" }), {
       target: { value: "host-new" },
     });
     await screen.findByRole("checkbox", { name: /Alpha/ });
-    fireEvent.click(screen.getByRole("checkbox", { name: /Alpha/ }));
+    await click(screen.getByRole("checkbox", { name: /Alpha/ }));
     release([
       { id: "other-provider", displayName: "Other provider", available: true },
     ]);
     await screen.findByRole("heading", { name: "Other provider" });
-    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await click(screen.getByRole("button", { name: "Apply" }));
     expect(state.call).not.toHaveBeenCalled();
     // Ordinary editing of the new provider still uses its current routed context.
     await screen.findByRole("checkbox", { name: /Beta/ });
@@ -120,9 +230,9 @@ describe("model settings workflow", () => {
         ).disabled,
       ).toBe(false),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Deselect all" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: /Beta/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await click(screen.getByRole("button", { name: "Deselect all" }));
+    await click(screen.getByRole("checkbox", { name: /Beta/ }));
+    await click(screen.getByRole("button", { name: "Apply" }));
     await waitFor(() =>
       expect(state.call).toHaveBeenCalledWith("saveProvider", {
         expectedRevision: 1,
@@ -144,7 +254,7 @@ describe("model settings workflow", () => {
     });
     render(<ModelFilterSettings />);
     await screen.findByText("Catalog unavailable");
-    fireEvent.click(screen.getByRole("button", { name: "Reset provider" }));
+    await click(screen.getByRole("button", { name: "Reset provider" }));
     await waitFor(() =>
       expect(state.call).toHaveBeenCalledWith("resetPreferences", {
         expectedRevision: 1,
@@ -168,13 +278,13 @@ describe("model settings workflow", () => {
       (screen.getByRole("checkbox", { name: /Alpha/ }) as HTMLInputElement)
         .disabled,
     ).toBe(false);
-    fireEvent.click(screen.getByRole("button", { name: "Deselect all" }));
+    await click(screen.getByRole("button", { name: "Deselect all" }));
     expect(
       (screen.getByRole("button", { name: "Apply" }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
-    fireEvent.click(screen.getByRole("checkbox", { name: /Beta/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await click(screen.getByRole("checkbox", { name: /Beta/ }));
+    await click(screen.getByRole("button", { name: "Apply" }));
     await waitFor(() =>
       expect(state.call).toHaveBeenCalledWith("saveProvider", {
         expectedRevision: 1,
@@ -189,7 +299,7 @@ describe("model settings workflow", () => {
   it("preserves a local draft when another client saves and requires explicit conflict recovery", async () => {
     const { rerender } = render(<ModelFilterSettings />);
     await screen.findByRole("checkbox", { name: /Alpha/ });
-    fireEvent.click(screen.getByRole("checkbox", { name: /Alpha/ }));
+    await click(screen.getByRole("checkbox", { name: /Alpha/ }));
     state.view = {
       ...state.view,
       snapshot: {
@@ -206,9 +316,7 @@ describe("model settings workflow", () => {
       (screen.getByRole("button", { name: "Apply" }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
-    fireEvent.click(
-      screen.getByRole("button", { name: "Load latest selection" }),
-    );
+    await click(screen.getByRole("button", { name: "Load latest selection" }));
     expect(
       (screen.getByRole("checkbox", { name: /Alpha/ }) as HTMLInputElement)
         .checked,
@@ -222,8 +330,8 @@ describe("model settings workflow", () => {
     state.call.mockRejectedValue(new Error("Offline"));
     render(<ModelFilterSettings />);
     await screen.findByRole("checkbox", { name: /Alpha/ });
-    fireEvent.click(screen.getByRole("checkbox", { name: /Alpha/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await click(screen.getByRole("checkbox", { name: /Alpha/ }));
+    await click(screen.getByRole("button", { name: "Apply" }));
     await screen.findByText("Offline");
     expect(
       (screen.getByRole("checkbox", { name: /Beta/ }) as HTMLInputElement)
@@ -257,7 +365,7 @@ describe("model settings workflow", () => {
       target: { value: "model-499" },
     });
     expect(screen.getAllByRole("checkbox")).toHaveLength(1);
-    fireEvent.click(screen.getByRole("button", { name: "Deselect all" }));
+    await click(screen.getByRole("button", { name: "Deselect all" }));
     expect((screen.getByRole("checkbox") as HTMLInputElement).checked).toBe(
       false,
     );
@@ -265,11 +373,11 @@ describe("model settings workflow", () => {
       (screen.getByRole("button", { name: "Apply" }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
-    fireEvent.click(screen.getByRole("button", { name: "Select all" }));
+    await click(screen.getByRole("button", { name: "Select all" }));
     expect((screen.getByRole("checkbox") as HTMLInputElement).checked).toBe(
       true,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await click(screen.getByRole("button", { name: "Apply" }));
     await waitFor(() =>
       expect(state.call).toHaveBeenCalledWith("saveProvider", {
         expectedRevision: 1,
@@ -294,8 +402,8 @@ describe("model settings workflow", () => {
       (screen.getByRole("checkbox", { name: /Alpha/ }) as HTMLInputElement)
         .checked,
     ).toBe(true);
-    fireEvent.click(screen.getByRole("checkbox", { name: /Beta/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await click(screen.getByRole("checkbox", { name: /Beta/ }));
+    await click(screen.getByRole("button", { name: "Apply" }));
     await waitFor(() =>
       expect(state.call).toHaveBeenCalledWith("saveProvider", {
         expectedRevision: 1,

@@ -1,0 +1,114 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color-scheme: light dark;
+}
+body {
+  margin: 0;
+}
+main {
+  color-scheme: light;
+  --background: #fff;
+  --foreground: #202124;
+  --muted-foreground: #62666e;
+  --border: #d9dce1;
+  --accent: #f0f1f3;
+  --accent-foreground: #202124;
+  --primary: #2864ba;
+  --ring: #2864ba;
+  --destructive: #ae2828;
+  --state-hover: #e5e7eb;
+  background: var(--background);
+  color: var(--foreground);
+  min-height: 100vh;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+main.dark {
+  color-scheme: dark;
+  --background: #18191b;
+  --foreground: #ebedf0;
+  --muted-foreground: #b0b5be;
+  --border: #42454a;
+  --accent: #303237;
+  --accent-foreground: #ebedf0;
+  --primary: #8bb7f7;
+  --ring: #8bb7f7;
+  --destructive: #ffaaaa;
+  --state-hover: #363a40;
+}
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  max-width: 64rem;
+}
+header > div {
+  flex: 1;
+  min-width: 12rem;
+}
+h1 {
+  font-size: 1.5rem;
+  margin: 0 0 0.4rem;
+}
+h2 {
+  font-size: 1rem;
+}
+header p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted-foreground);
+}
+button,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 0.35rem;
+  padding: 0.45rem;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.fixture-composer {
+  max-width: 64rem;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  padding: 1rem;
+  margin-top: 1.5rem;
+  display: grid;
+  gap: 0.7rem;
+}
+.fixture-composer output {
+  display: block;
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+textarea {
+  min-height: 4rem;
+  resize: vertical;
+}
+@media (max-width: 650px) {
+  main {
+    padding: 0.75rem;
+  }
+}
+
+.mf-settings input:not([type="checkbox"]) {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.25rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0.35rem;
+  background: var(--background);
+  color: inherit;
+}

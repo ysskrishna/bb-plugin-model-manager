@@ -16,6 +16,7 @@ import {
   usePreferencesView,
 } from "./preferences-client";
 import { ModelFilterSettings } from "./ModelFilterSettings";
+import { PreferredModelAction } from "./PreferredModelAction";
 import "./app.css";
 
 function RuntimeBootstrap() {
@@ -50,7 +51,7 @@ function RuntimeBootstrap() {
         reportRuntime({
           state: "unsupported",
           message:
-            "This BB client is not compatible with Model Filter. Native model lists are unchanged.",
+            "This BB client is not compatible with Model Manager. Native model lists are unchanged.",
         });
         return;
       }
@@ -60,7 +61,7 @@ function RuntimeBootstrap() {
       );
       reportRuntime({
         state: "active",
-        message: "Filtering is active in this BB window.",
+        message: "Model preferences are connected in this BB window.",
       });
     } catch (error) {
       reportRuntime({
@@ -80,6 +81,11 @@ function RuntimeBootstrap() {
 }
 
 export default definePluginApp((app) => {
+  app.composer.customize({
+    id: "preferred-model",
+    scopes: ["new-thread"],
+    actions: [{ id: "apply-preferred", component: PreferredModelAction }],
+  });
   app.slots.experimental_appOverlay({
     id: "runtime",
     component: RuntimeBootstrap,

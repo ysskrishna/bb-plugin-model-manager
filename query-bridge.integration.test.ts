@@ -12,6 +12,37 @@ const raw = {
   selectedOnlyModels: [],
 };
 describe("installed TanStack observer behavior", () => {
+  it("filters selected-model discovery queries without changing their raw catalog", () => {
+    const selectedKey = [...key, "b"];
+    const client = new QueryClient();
+    client.setQueryData(selectedKey, raw);
+    const bridge = attachQueryBridge(client as unknown as QueryClientAdapter, {
+      revision: 1,
+      providers: { custom: { mode: "selected", modelIds: ["b"] } },
+    });
+    const observer = new QueryObserver<typeof raw>(client, {
+      queryKey: selectedKey,
+      enabled: false,
+    });
+    const unsubscribe = observer.subscribe(() => {});
+    try {
+      expect(
+        observer.getCurrentResult().data!.models.map((m) => m.model),
+      ).toEqual(["b"]);
+      expect(client.getQueryData(selectedKey)).toEqual(raw);
+      bridge.update({
+        revision: 2,
+        providers: { custom: { mode: "selected", modelIds: ["c"] } },
+      });
+      expect(
+        observer.getCurrentResult().data!.models.map((m) => m.model),
+      ).toEqual(["c"]);
+    } finally {
+      bridge.dispose();
+      unsubscribe();
+      client.clear();
+    }
+  });
   it("filters remembered placeholders and recomputes them after a remote rule change", () => {
     const client = new QueryClient();
     const observer = new QueryObserver<typeof raw>(client, {

@@ -1,135 +1,59 @@
-# Model Filter
+# Model Manager
 
-[![CI](https://github.com/werserk/bb-plugin-model-filter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/werserk/bb-plugin-model-filter/actions/workflows/ci.yml)
+Curate the models shown in BB's native menus, separately for each provider. Save favorites, choose their order, and keep a preferred model and reasoning level one click away in the new-thread composer. Preferences are shared by devices connected to the same BB server.
 
-Choose which models appear in BB's standard model pickers while keeping each picker's current model available.
+Based on [Model Filter](https://github.com/werserk/bb-plugin-model-filter) at `c651107`, retaining its MIT license and transactional preference store. This is a separate plugin; it does not modify BB itself.
 
-Open **Settings → Installed plugins → Model Filter** to edit a provider's model list. Every provider has one editable checklist with **Select all** and **Deselect all**. Providers keep their native lists until you apply a selection; new model IDs then stay hidden until you select them. A hidden model that is already current remains available to that picker, marked **(Current)**, with its native reasoning and session metadata.
+## Use
 
-Preferences live in this plugin's SQLite database on the current BB server. Connected clients share the saved selection; independent BB servers have separate preferences. The plugin adds no external service or credential setting. Filtering affects picker choices, not provider authorization, billing, or model access through CLI/API calls.
+Open Settings -> Plugins -> Model Manager. Choose a provider, edit its models, and Apply. Select all and Deselect all act on the entire catalog, including search results. At least one currently available model is required; disable the entire provider through BB's own provider settings when needed.
 
-![Model Filter settings](docs/media/settings.jpg)
+- Configured providers show only selected model IDs. Newly discovered IDs stay hidden until selected. Reset provider restores its full native list, including future models.
+- Star a model to put it before other models. Arrow buttons reorder within the favorite or ordinary group. IDs and native capability metadata remain intact.
+- Choose a preferred model and optional reasoning level. Click Use preferred model in the new-thread composer to apply it for the currently selected provider, using the standard service tier. Nothing is sent automatically.
+- Existing picker selections remain available as Current even when hidden. Applying preferences does not switch an existing conversation's model.
+- The catalog source control selects the machine/workspace used for discovery. Saved preferences remain provider-wide. The preview uses the same source.
+- Concurrent edits are revision-checked. A conflict preserves your draft and lets you reload the latest saved selection.
 
-![Filtered choices in BB's native model picker](docs/media/menu.jpg)
+## Known limitations
 
-## Compatibility
+These are accepted V1 boundaries, not claims that BB enforces a model policy:
 
-The verified integration target is **BB 0.47.1 / Plugin SDK 0.6.79**. The manifest bounds the supported BB release series and pins the build SDK.
+1. **Menu filtering only.** CLI/API requests, saved automations, tasks, workflows, and other plugins can still explicitly request a hidden model. A current hidden selection remains usable in its picker.
+2. **Explicit preferred selection.** The preferred-model button is not an automatic default across BB. BB's remembered/project defaults are not overwritten. There is no fallback routing.
+3. **Custom models remain BB configuration.** Register additional model IDs using BB's supported `customModels` configuration; Model Manager can then curate them. It does not create provider access or write BB's configuration file.
+4. **Version-specific adapter.** Settings, storage, RPC and the preferred-model action use public APIs. Native filtering also uses private React/TanStack observer integration. A future BB change can break it. When query-client discovery fails, the plugin reports inactivity and leaves native menus usable. Do not run it alongside another model-filtering adapter.
+5. Independent BB servers do not synchronize preferences. This separate plugin does not automatically import another plugin's database.
 
-Settings, storage, catalog reads, RPC, and realtime use the public Plugin SDK. Native picker filtering also needs a version-scoped adapter: it finds the shared query client through private React runtime fields and composes TanStack Query observer projections. This is not a documented public BB extension hook. It imports no BB private modules and edits no BB installation files.
-
-If the adapter cannot identify a compatible query client, BB's full native choices remain available and the settings page reports that filtering is inactive. Recheck the native picker and restoration behavior after updating BB. See [compatibility evidence and remaining checks](docs/compatibility.md).
-
-## Installation
-
-Use a supported Node.js version for BB 0.47.1: Node 22.19+, 24, or 26. The Git release is the distribution source; no npm publication is required.
-
-Install the compatible Git release on the BB server:
-
-```bash
-bb plugin install git:https://github.com/werserk/bb-plugin-model-filter.git@^0.1.0
-```
-
-For a local development checkout, follow the steps below.
-
-Install the locked dependencies:
-
-```bash
-npm ci --ignore-scripts
-```
-
-Build the plugin:
-
-```bash
-npm run build
-```
-
-Register the local checkout in BB:
-
-```bash
-bb plugin install .
-```
-
-After changing source, build again and reload:
-
-```bash
-bb plugin reload model-filter
-```
-
-For an installed checkout, `bb plugin dev` provides the rebuild/reload loop.
-
-## Settings
-
-Choose a provider, select model IDs, and apply. For a large catalog, use **Deselect all**, search for your favorites, and check just those models. **Select all** and **Deselect all** always affect the entire provider catalog, including rows hidden by search. Selecting all saves the current IDs explicitly, so future models stay hidden. At least one available model must be selected before applying.
-
-Model labels appear alongside their opaque IDs so aliases and identical labels remain distinct. An unavailable saved ID can remain alongside an available selected model. **Reset provider** removes one provider's rule and restores its native list, including future models; **Reset all providers** removes every rule. The **Enable model filtering** plugin setting restores native choices when disabled and keeps saved preferences for later.
-
-Each save checks the server revision. If another client saved first, the editor preserves your draft and offers the latest saved selection instead of overwriting it silently.
-
-The collapsed **Preview menu** uses BB's actual hosted picker. Its selections only change the preview.
+The compatibility target is **BB 0.50.1 / Plugin SDK 0.6.157**. Automated contracts and an isolated browser harness verify the adapter; live installation into the user's BB is a separate acceptance step. See [compatibility](docs/compatibility.md).
 
 ## CLI
 
-Inspect the saved snapshot:
-
-```bash
-bb model-filter status --json
+```sh
+bb model-manager status --json
+bb model-manager select codex <model-id> <another-model-id>
+bb model-manager favorite codex <model-id>
+bb model-manager unfavorite codex <model-id>
+bb model-manager order codex <first-id> <second-id>
+bb model-manager prefer codex <model-id> high
+bb model-manager clear-preferred codex
+bb model-manager all codex
+bb model-manager reset codex
 ```
 
-Choose model IDs for one provider, using IDs from the raw BB provider catalog:
+All commands accept `--json`. Use exact provider/model IDs from `bb provider models <provider>`. `all` restores the full catalog while retaining preferences; `reset` removes the provider's entire rule. Reset without a provider removes every rule. CLI preference edits affect menus; they do not restrict execution.
 
-```bash
-bb model-filter select codex gpt-6-astra gpt-6-sol
-```
+## Development and installation
 
-Restore its full catalog while remembering the selection:
-
-```bash
-bb model-filter all codex
-```
-
-Remove one provider's saved rule:
-
-```bash
-bb model-filter reset codex
-```
-
-Omit the provider from `reset` to remove all rules. Every command supports `--json`. CLI writes use the same revision-checked store as the settings editor.
-
-## Development checks
-
-Backend tests use a real temporary SQLite database. Build its test dependency after installing dependencies:
-
-```bash
+```sh
+npm ci --ignore-scripts
 npm rebuild better-sqlite3 --ignore-scripts=false
+npm run check
+npm run dev:fixture
 ```
 
-The package explicitly permits the `better-sqlite3` install script. Other install scripts remain disabled during dependency installation.
+The fixture is an isolated browser harness with labeled example catalogs and no account or inference calls. Open the URL printed by Vite. It is not a second BB installation.
 
-```bash
-npm run format:check
-```
+After reviewing a build, install from the checkout with `bb plugin install .`. No live installation or default-branch merge is performed by the build/check commands. This repository is not claimed to be published in the BB marketplace.
 
-```bash
-npm run typecheck
-```
-
-```bash
-npm run check:sdk
-```
-
-```bash
-npm test
-```
-
-```bash
-npm run build
-```
-
-CI runs these checks against the lockfile. The SDK scanner checks source imports and declared dependencies; passing it does not make the private React/TanStack adapter a supported public hook. Live verification must cover native menus, current-model exceptions, raw cached catalogs, multiple clients, and disable/reload restoration.
-
-See [architecture](docs/ARCHITECTURE.md), [implementation and acceptance](docs/implementation.md), and [changelog](CHANGELOG.md). Runtime-shimmed React and UI utility packages stay in development dependencies; bundled code depends on Zod and the non-portaling Radix Slot primitive. The vendored Button and Input retain their local source.
-
-## Repository and license
-
-The primary branch is `main`. Pull requests and pushes run the checks defined in [.github/workflows/ci.yml](.github/workflows/ci.yml). The plugin is distributed under the [MIT license](LICENSE); vendored and bundled code retains its [third-party notices](THIRD_PARTY_NOTICES.md).
+[Specification](docs/spec.md) | [Architecture](docs/ARCHITECTURE.md) | [Implementation](tasks/plan.md) | [Upstream license](LICENSE)
