@@ -22,6 +22,7 @@ jobs:
         run: npm rebuild better-sqlite3 --ignore-scripts=false
       - run: npm run format:check
       - run: npm run typecheck
+      - run: npm run typecheck:fixture
       - run: npm run check:sdk
       - run: npm test
       - run: npm run build

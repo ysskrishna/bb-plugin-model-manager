@@ -13,6 +13,7 @@ const result = experimental_scanPublicSdkOnly(root, {
     /^tailwind-merge$/,
     /^vitest$/,
     /^@tanstack\/query-core$/,
+    /^vite$/,
   ],
 });
 if (result.violations.length || result.privateDependencies.length) {
